@@ -1,0 +1,2 @@
+[console_scripts]
+solara = solara.__main__:main
