@@ -4,64 +4,79 @@ globals [
 ]
 
 patches-own [
-  lane-type   ; "road", "scooter-lane", "intersection", "sidewalk", "grass"
+  lane-type   ; "road", "scooter-lane", "intersection", "roundabout", "grass"
   occupied?   ; Whether the patch is currently occupied by an agent
 ]
 
 to setup
   clear-all
+  resize-world -30 30 -30 30
   setup-patches
-  ;;setup-agents
+  setup-agents
   reset-ticks
 end
 
 to setup-patches
-  ;; Set default lane-type
+  ; Set default lane-type
   ask patches [ set lane-type "grass" ]
 
-  ;; Define main horizontal roads
-  ask patches with [ pycor mod 10 = 0 ] [
+  ; Define main horizontal roads every 7 patches
+  ask patches with [ pycor mod 7 = 0 ] [
     set lane-type "road"
   ]
 
-  ;; Define main vertical roads
-  ask patches with [ pxcor mod 10 = 0 ] [
+  ; Define main vertical roads every 7 patches
+  ask patches with [ pxcor mod 7 = 0 ] [
     set lane-type "road"
   ]
 
-  ;; Define intersections
-  ask patches with [ pxcor mod 10 = 0 and pycor mod 10 = 0 ] [
+  ; Define intersections
+  ask patches with [ (pxcor mod 7 = 0) and (pycor mod 7 = 0) ] [
     set lane-type "intersection"
   ]
 
-  ;; Define scooter lanes alongside main roads
-  ;; For horizontal roads
-  ask patches with [ pycor mod 10 = 1 ] [
+  ; Define roundabouts at specific intersections
+  ask patches with [ (pxcor mod 14 = 0) and (pycor mod 14 = 0) ] [
+    set lane-type "roundabout"
+  ]
+
+  ; Define scooter lanes alongside main roads
+  ; For horizontal roads
+  ask patches with [ pycor mod 7 = 1 ] [
     set lane-type "scooter-lane"
   ]
-  ;; For vertical roads
-  ask patches with [ pxcor mod 10 = 1 ] [
+  ; For vertical roads
+  ask patches with [ pxcor mod 7 = 1 ] [
     set lane-type "scooter-lane"
   ]
 
-  ;; Visualize the lanes
+  ; Visualize the lanes
   ask patches [
     if lane-type = "road" [ set pcolor gray ]
     if lane-type = "scooter-lane" [ set pcolor green ]
     if lane-type = "intersection" [ set pcolor yellow ]
+    if lane-type = "roundabout" [ set pcolor red ]
     if lane-type = "grass" [ set pcolor brown ]
   ]
 
-  ;; Define origin and destination points
+  ; Define origin and destination points
   set origin-points patches with [ pxcor = min-pxcor and lane-type = "road" ]
   set destination-points patches with [ pxcor = max-pxcor and lane-type = "road" ]
+end
+
+to setup-agents
+  ; Placeholder
+end
+
+to go
+  ; Placeholder
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
 10
-647
-448
+1011
+812
 -1
 -1
 13.0
@@ -74,10 +89,10 @@ GRAPHICS-WINDOW
 1
 1
 1
--16
-16
--16
-16
+-30
+30
+-30
+30
 0
 0
 1
