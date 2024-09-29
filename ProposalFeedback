@@ -1,0 +1,11 @@
+Proposal feedback:
+
+What is the research question? What kinds of policies will you examine? There is a lack of specificity. Neat domain though. 
+
+The idea of simulating an urban road network seems overly ambitious - you should consider simplifying the environment. 
+
+Pick one or two policies to investigate - the proposal is too broad. 
+
+A key concept in the intro was safety, but I don't see safety-related state variables. If this is not accounted for, then the limitation should be made clear. 
+
+I'm not sure gathering an cleaning data on escooter use is a realistic goal - it's a very short project so you might want to consider using some broad summary statistics to guide your choice of scenarios to examine.
