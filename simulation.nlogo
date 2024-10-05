@@ -3,6 +3,11 @@ globals [
   destination-points ; List of ending locations
 ]
 
+turtles-own [
+  car-speed
+  people-speed
+]
+
 patches-own [
   lane-type   ; "road", "scooter-lane", "intersection", "roundabout", "grass"
   occupied?   ; Whether the patch is currently occupied by an agent
@@ -12,7 +17,7 @@ to setup
   clear-all
   resize-world -30 30 -30 30
   setup-patches
-  setup-agents
+  setup-cars
   reset-ticks
 end
 
@@ -35,16 +40,12 @@ to setup-patches
     set lane-type "intersection"
   ]
 
-  ; Define roundabouts at specific intersections
-  ask patches with [ (pxcor mod 14 = 0) and (pycor mod 14 = 0) ] [
-    set lane-type "roundabout"
-  ]
-
   ; Define scooter lanes alongside main roads
   ; For horizontal roads
   ask patches with [ pycor mod 7 = 1 ] [
     set lane-type "scooter-lane"
   ]
+
   ; For vertical roads
   ask patches with [ pxcor mod 7 = 1 ] [
     set lane-type "scooter-lane"
@@ -59,6 +60,18 @@ to setup-patches
     if lane-type = "grass" [ set pcolor brown ]
   ]
 
+  ; Check for adjacent yellow and gray patches next to green patches and change green to white
+  ask patches with [ lane-type = "scooter-lane" ] [
+    if any? neighbors4 with [ pcolor = yellow ] and any? neighbors with [ pcolor = gray ] [
+      set lane-type "crossing"
+    ]
+  ]
+
+  ask patches [
+    if lane-type = "crossing" [ set pcolor white ]
+  ]
+
+
   ; Define origin and destination points
   set origin-points patches with [ pxcor = min-pxcor and lane-type = "road" ]
   set destination-points patches with [ pxcor = max-pxcor and lane-type = "road" ]
@@ -69,8 +82,62 @@ to setup-agents
 end
 
 to go
-  ; Placeholder
+  move-cars
+  tick
 end
+
+to setup-cars
+  ; Create cars on random road patches
+  create-turtles 10 [
+    setxy random-xcor random-ycor
+    while [ pcolor != gray ] [ setxy random-xcor random-ycor ]
+    setxy pxcor pycor
+
+    let neighboring-roads neighbors with [pcolor = gray or pcolor = white]
+    if any? neighboring-roads [
+      ; Check if there are roads above or below (vertical)
+      if any? neighboring-roads with [pycor = [pycor] of myself + 1 or pycor = [pycor] of myself - 1] [
+        set heading one-of [0 180]  ; Vertical road: face north or south
+      ]
+      ; Check if there are roads to the left or right (horizontal)
+      if any? neighboring-roads with [pxcor = [pxcor] of myself + 1 or pxcor = [pxcor] of myself - 1] [
+        set heading one-of [90 270]  ; Horizontal road: face east or west
+      ]
+    ]
+
+    set shape "car"
+    set color blue
+    set car-speed random-float 0.5 + 0.1
+  ]
+end
+
+to move-cars
+  ask turtles [
+    ; Check if the turtle is a car by checking its shape
+    if shape = "car" [
+      fd car-speed  ; Move forward at their speed
+
+      if pcolor = yellow [
+        if random-float 1 < 0.2[
+          set heading one-of [0 90 180 270]
+        ]
+      ]
+;      ; If on a patch that is not a road, change direction to the nearest road
+;      if pcolor != gray [
+;        let target-patch one-of patches with [pcolor = gray]  ; Find a gray patch (road)
+;        if target-patch != nobody [
+;          face target-patch  ; Face the target patch
+;          ; Move back towards the target patch if not already on it
+;          if pcolor != gray [
+;            move-to target-patch  ; Move to the target patch
+;          ]
+;        ]
+;      ]
+    ]
+  ]
+end
+
+
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
@@ -107,6 +174,23 @@ BUTTON
 NIL
 setup
 NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+96
+98
+159
+131
+NIL
+go
+T
 1
 T
 OBSERVER
