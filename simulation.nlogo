@@ -6,6 +6,8 @@ globals [
 turtles-own [
   car-speed
   people-speed
+  destination-x
+  destination-y
 ]
 
 patches-own [
@@ -100,12 +102,27 @@ end
 
 to setup-cars
   ; Create cars on random road patches
-  create-turtles 1 [
+  create-turtles 10 [
     setxy random-xcor random-ycor
     while [ pcolor != gray ]
     [
       setxy random-xcor random-ycor
       setxy pxcor pycor
+    ]
+
+    ; Set destination on a road patch
+    let destination patch random-xcor random-ycor
+
+    while [[pcolor] of destination != gray and [pcolor] of destination != white] [
+      set destination patch random-xcor random-ycor
+    ]
+
+    set destination-x [pxcor] of destination
+    set destination-y [pycor] of destination
+
+    ask patch destination-x destination-y
+    [
+      set pcolor sky
     ]
 
     let neighboring-roads neighbors with [pcolor = gray or pcolor = white]
@@ -173,14 +190,70 @@ to move-cars
       ]
 
       if pcolor = green [
-        if random-float 1 < 0.2[
-          set heading one-of [0 90 180 270]
+        print abs(pxcor - destination-x)
+        print abs(pycor - destination-y)
+        ifelse abs(pxcor - destination-x) > abs(pycor - destination-y)[
+          if pxcor < destination-x[set heading 90]
+          if pxcor > destination-x[set heading 270]
+        ][
+          if pycor < destination-y[set heading 0]
+          if pycor > destination-y[set heading 180]
         ]
+;        if random-float 1 < 0.1[
+;          set heading one-of [0 90 180 270]
+;        ]
+      ]
+
+      if pxcor = destination-x and pycor = destination-y[
+        die
       ]
     ]
   ]
 end
 
+
+;to move-cars
+;  ask turtles [
+;    ; Check if the turtle is a car by checking its shape
+;    if shape = "car" [
+;
+;      ; Calculate the direction to the destination
+;      let delta-x destination-x - pxcor
+;      let delta-y destination-y - pycor
+;
+;      ifelse (abs delta-x >= abs delta-y) [  ; Decide movement based on the dominant axis
+;        if delta-x > 0 [  ; Move east
+;          set heading 90
+;        ]
+;        if delta-x < 0 [  ; Move west
+;          set heading 270
+;        ]
+;      ] [
+;        if delta-y > 0 [  ; Move north
+;          set heading 0
+;        ]
+;        if delta-y < 0 [  ; Move south
+;          set heading 180
+;        ]
+;      ]
+;
+;      ; Check the color of the next patch in the direction of movement
+;      let color-of-next-patch [pcolor] of patch-at dx dy  ; Get the color of the next patch
+;
+;      ifelse (color-of-next-patch = red) or (color-of-next-patch = yellow) [
+;        ;; Handle red/yellow patch case here (e.g., stop or turn)
+;        ;; You can decide what the car should do here, e.g., stop or wait for the light to change
+;      ][
+;        fd car-speed  ;; Move forward if the patch is not red or yellow
+;      ]
+;
+;      ;; Optional: Check if the car has reached its destination
+;      if (pxcor = destination-x) and (pycor = destination-y) [
+;        ;; Perform actions when the car reaches its destination (e.g., stop or change behavior)
+;      ]
+;    ]
+;  ]
+;end
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
