@@ -122,7 +122,7 @@ to setup-cars
 
     set shape "car"
     set color blue
-    set car-speed random-float 0.01 + 0.005
+    set car-speed random-float 0.005 + 0.001
   ]
 end
 
@@ -166,13 +166,13 @@ to move-cars
 
       let color-of-next-patch [pcolor] of patch-at change-x change-y
 
-      ifelse (color-of-next-patch = red) or (color-of-next-patch = yellow) [
+      ifelse color-of-next-patch = red  [
         ;; Handle red patch case here (e.g., stop or turn)
       ][
         fd car-speed  ;; Move forward if the patch is not red
       ]
 
-      if pcolor = green [
+      if pcolor = yellow [
         if random-float 1 < 0.2[
           set heading one-of [0 90 180 270]
         ]
