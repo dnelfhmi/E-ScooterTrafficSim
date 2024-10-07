@@ -6,6 +6,8 @@ globals [
 turtles-own [
   car-speed
   people-speed
+  destination-x
+  destination-y
 ]
 
 patches-own [
@@ -108,6 +110,23 @@ to setup-cars
       setxy pxcor pycor
     ]
 
+    ; Set destination on a road patch
+    let destination patch random-xcor random-ycor
+    while [pcolor != gray  pcolor != white] [
+      set destination patch random-xcor random-ycor
+    ]
+
+    set destination-x [pxcor] of destination
+    set destination-y [pycor] of destination
+
+    print patch-here
+    print destination
+
+    ask patch-at destination-x destination-y
+   [
+      set pcolor sky
+   ]
+
     let neighboring-roads neighbors with [pcolor = gray or pcolor = white]
     if any? neighboring-roads [
       ; Check if there are roads above or below (vertical)
@@ -122,7 +141,7 @@ to setup-cars
 
     set shape "car"
     set color blue
-    set car-speed random-float 0.005 + 0.001
+    set car-speed random-float 0.01 + 0.005
   ]
 end
 
@@ -143,43 +162,87 @@ to change-lights
   ]
 end
 
+;to move-cars
+;  ask turtles [
+;    ; Check if the turtle is a car by checking its shape
+;    if shape = "car" [
+;
+;      let change-x 0
+;      let change-y 0
+;
+;      if heading = 0 [
+;        set change-y 1  ;; Facing north
+;      ]
+;      if heading = 90 [
+;        set change-x 1  ;; Facing east
+;      ]
+;      if heading = 180 [
+;        set change-y -1  ;; Facing south
+;      ]
+;      if heading = 270 [
+;        set change-x -1  ;; Facing west
+;      ]
+;
+;      let color-of-next-patch [pcolor] of patch-at change-x change-y
+;
+;      ifelse (color-of-next-patch = red) or (color-of-next-patch = yellow) [
+;        ;; Handle red patch case here (e.g., stop or turn)
+;      ][
+;        fd car-speed  ;; Move forward if the patch is not red
+;      ]
+;
+;      if pcolor = green [
+;        if random-float 1 < 0.2[
+;          set heading one-of [0 90 180 270]
+;        ]
+;      ]
+;    ]
+;  ]
+;end
+
 to move-cars
   ask turtles [
     ; Check if the turtle is a car by checking its shape
     if shape = "car" [
 
-      let change-x 0
-      let change-y 0
+      ; Calculate the direction to the destination
+      let delta-x destination-x - pxcor
+      let delta-y destination-y - pycor
 
-      if heading = 0 [
-        set change-y 1  ;; Facing north
-      ]
-      if heading = 90 [
-        set change-x 1  ;; Facing east
-      ]
-      if heading = 180 [
-        set change-y -1  ;; Facing south
-      ]
-      if heading = 270 [
-        set change-x -1  ;; Facing west
-      ]
-
-      let color-of-next-patch [pcolor] of patch-at change-x change-y
-
-      ifelse color-of-next-patch = red  [
-        ;; Handle red patch case here (e.g., stop or turn)
-      ][
-        fd car-speed  ;; Move forward if the patch is not red
-      ]
-
-      if pcolor = yellow [
-        if random-float 1 < 0.2[
-          set heading one-of [0 90 180 270]
+      ifelse (abs delta-x >= abs delta-y) [  ; Decide movement based on the dominant axis
+        if delta-x > 0 [  ; Move east
+          set heading 90
         ]
+        if delta-x < 0 [  ; Move west
+          set heading 270
+        ]
+      ] [
+        if delta-y > 0 [  ; Move north
+          set heading 0
+        ]
+        if delta-y < 0 [  ; Move south
+          set heading 180
+        ]
+      ]
+
+      ; Check the color of the next patch in the direction of movement
+      let color-of-next-patch [pcolor] of patch-at dx dy  ; Get the color of the next patch
+
+      ifelse (color-of-next-patch = red) or (color-of-next-patch = yellow) [
+        ;; Handle red/yellow patch case here (e.g., stop or turn)
+        ;; You can decide what the car should do here, e.g., stop or wait for the light to change
+      ][
+        fd car-speed  ;; Move forward if the patch is not red or yellow
+      ]
+
+      ;; Optional: Check if the car has reached its destination
+      if (pxcor = destination-x) and (pycor = destination-y) [
+        ;; Perform actions when the car reaches its destination (e.g., stop or change behavior)
       ]
     ]
   ]
 end
+
 
 @#$#@#$#@
 GRAPHICS-WINDOW
