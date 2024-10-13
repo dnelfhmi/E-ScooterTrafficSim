@@ -6,8 +6,12 @@ globals [
 turtles-own [
   car-speed
   people-speed
-  destination-x
-  destination-y
+  destination-road-x
+  destination-road-y
+  destination-footpath-x
+  destination-footpath-y
+  start-x
+  start-y
 ]
 
 patches-own [
@@ -19,6 +23,7 @@ to setup
   clear-all
   resize-world -30 30 -30 30
   setup-patches
+  setup-people
   setup-cars
   reset-ticks
 end
@@ -53,16 +58,21 @@ to setup-patches
     set lane-type "scooter-lane"
   ]
 
+  ask patches with [ pycor mod 7 = 1 and pxcor mod 7 = 1 ][
+    set lane-type "scooter-intersection"
+  ]
+
 
   ; Visualize the lanes
   ask patches [
     if lane-type = "road" [ set pcolor gray ]
     if lane-type = "scooter-lane" [ set pcolor blue ]
+    if lane-type = "scooter-intersection" [ set pcolor rgb 80 80 255]
     if lane-type = "grass" [ set pcolor brown ]
   ]
 
   ; Check for adjacent yellow and gray patches next to green patches and change green to white
-  ask patches with [ lane-type = "scooter-lane" ] [
+  ask patches with [ lane-type = "scooter-lane" or lane-type = "scooter-intersection" ] [
     if any? neighbors4 with [ lane-type = "intersection"] and any? neighbors with [ pcolor = gray ] [
       set lane-type "crossing"
     ]
@@ -90,11 +100,8 @@ to setup-patches
   set destination-points patches with [ pxcor = max-pxcor and lane-type = "road" ]
 end
 
-to setup-agents
-  ; Placeholder
-end
-
 to go
+  move-people
   move-cars
   change-lights
   tick
@@ -117,10 +124,10 @@ to setup-cars
       set destination patch random-xcor random-ycor
     ]
 
-    set destination-x [pxcor] of destination
-    set destination-y [pycor] of destination
+    set destination-road-x [pxcor] of destination
+    set destination-road-y [pycor] of destination
 
-    ask patch destination-x destination-y
+    ask patch destination-road-x destination-road-y
     [
       set pcolor sky
     ]
@@ -139,7 +146,7 @@ to setup-cars
 
     set shape "car"
     set color blue
-    set car-speed random-float 0.01 + 0.005
+    set car-speed random-float 0.01 + 0.001
   ]
 end
 
@@ -190,79 +197,157 @@ to move-cars
       ]
 
       if pcolor = green [
-        print abs(pxcor - destination-x)
-        print abs(pycor - destination-y)
-        ifelse abs(pxcor - destination-x) > abs(pycor - destination-y)[
-          if pxcor < destination-x[set heading 90]
-          if pxcor > destination-x[set heading 270]
+        print abs(pxcor - destination-road-x)
+        print abs(pycor - destination-road-y)
+        ifelse abs(pxcor - destination-road-x) > abs(pycor - destination-road-y)[
+          if pxcor < destination-road-x[set heading 90]
+          if pxcor > destination-road-x[set heading 270]
         ][
-          if pycor < destination-y[set heading 0]
-          if pycor > destination-y[set heading 180]
+          if pycor < destination-road-y[set heading 0]
+          if pycor > destination-road-y[set heading 180]
         ]
-;        if random-float 1 < 0.1[
-;          set heading one-of [0 90 180 270]
-;        ]
       ]
 
-      if pxcor = destination-x and pycor = destination-y[
+      if pxcor = destination-road-x and pycor = destination-road-y[
         die
       ]
     ]
   ]
 end
 
+to setup-people
+  ; Create cars on random road patches
+  create-turtles 1 [
+    setxy random-xcor random-ycor
+    while [ pcolor != blue ]
+    [
+      setxy random-xcor random-ycor
+      setxy pxcor pycor
+    ]
 
-;to move-cars
-;  ask turtles [
-;    ; Check if the turtle is a car by checking its shape
-;    if shape = "car" [
-;
-;      ; Calculate the direction to the destination
-;      let delta-x destination-x - pxcor
-;      let delta-y destination-y - pycor
-;
-;      ifelse (abs delta-x >= abs delta-y) [  ; Decide movement based on the dominant axis
-;        if delta-x > 0 [  ; Move east
-;          set heading 90
-;        ]
-;        if delta-x < 0 [  ; Move west
-;          set heading 270
-;        ]
-;      ] [
-;        if delta-y > 0 [  ; Move north
-;          set heading 0
-;        ]
-;        if delta-y < 0 [  ; Move south
-;          set heading 180
-;        ]
-;      ]
-;
-;      ; Check the color of the next patch in the direction of movement
-;      let color-of-next-patch [pcolor] of patch-at dx dy  ; Get the color of the next patch
-;
-;      ifelse (color-of-next-patch = red) or (color-of-next-patch = yellow) [
-;        ;; Handle red/yellow patch case here (e.g., stop or turn)
-;        ;; You can decide what the car should do here, e.g., stop or wait for the light to change
-;      ][
-;        fd car-speed  ;; Move forward if the patch is not red or yellow
-;      ]
-;
-;      ;; Optional: Check if the car has reached its destination
-;      if (pxcor = destination-x) and (pycor = destination-y) [
-;        ;; Perform actions when the car reaches its destination (e.g., stop or change behavior)
-;      ]
-;    ]
-;  ]
-;end
+    set start-x pxcor
+    set start-y pycor
+
+    ; Set destination on a road patch
+    let destination patch random-xcor random-ycor
+
+    while [[pcolor] of destination != blue and [pcolor] of destination != blue] [
+      set destination patch random-xcor random-ycor
+    ]
+
+    set destination-footpath-x [pxcor] of destination
+    set destination-footpath-y [pycor] of destination
+
+    ask patch destination-footpath-x destination-footpath-y
+    [
+      set pcolor sky
+    ]
+
+    let road-destination patch random-xcor random-ycor
+
+    ask patch destination-footpath-x destination-footpath-y
+    [
+      ask neighbors [
+        if pcolor = gray or pcolor = white[
+          set road-destination patch pxcor pycor
+        ]
+      ]
+    ]
+
+    set destination-road-x [pxcor] of destination
+    set destination-road-y [pycor] of destination
+
+    let neighboring-roads neighbors with [pcolor = blue or pcolor = white]
+
+
+    if any? neighboring-roads [
+      ; Check if there are roads above or below (vertical)
+      if any? neighboring-roads with [pycor = [pycor] of myself + 1 or pycor = [pycor] of myself - 1] [
+        ifelse pxcor < destination-footpath-x [
+          set heading 180  ; Vertical road: face north or south
+        ][
+          set heading 0   ; Vertical road: face north or south
+        ]
+
+      ]
+      ; Check if there are roads to the left or right (horizontal)
+      if any? neighboring-roads with [pxcor = [pxcor] of myself + 1 or pxcor = [pxcor] of myself - 1] [
+        ifelse pxcor > destination-footpath-x [
+          set heading 270  ; Vertical road: face north or south
+        ][
+          set heading 90   ; Vertical road: face north or south
+        ]
+      ]
+    ]
+
+    set shape "person"
+    set color black
+    set people-speed random-float 0.001 + 0.0001
+
+  ]
+end
+
+to move-people
+  ask turtles [
+    ; Check if the turtle is a car by checking its shape
+    if shape = "person" [
+
+      let change-x 0
+      let change-y 0
+
+      if heading = 0 [
+        set change-y 1  ;; Facing north
+      ]
+      if heading = 90 [
+        set change-x 1  ;; Facing east
+      ]
+      if heading = 180 [
+        set change-y -1  ;; Facing south
+      ]
+      if heading = 270 [
+        set change-x -1  ;; Facing west
+      ]
+
+      let color-of-next-patch [pcolor] of patch-at change-x change-y
+
+      ifelse (color-of-next-patch = white) [
+        let nearby-cars turtles with [shape = "car" and distance myself < 3]
+
+        ifelse any? nearby-cars [
+          ;; stop
+        ][
+          ;; Move forward if no cars are nearby
+          fd people-speed
+        ]
+      ][
+        fd people-speed  ;; Move forward if the patch is not red
+      ]
+
+      if pcolor = rgb 80 80 255 [
+        ifelse abs(pxcor - destination-footpath-x) > abs(pycor - destination-road-y)[
+          if pxcor < destination-footpath-x[set heading 90]
+          if pxcor > destination-footpath-x[set heading 270]
+        ][
+          if pycor < destination-footpath-y[set heading 0]
+          if pycor > destination-footpath-y[set heading 180]
+        ]
+      ]
+
+      if pxcor = destination-footpath-x and pycor = destination-footpath-y[
+        die
+      ]
+    ]
+  ]
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
 10
-676
-477
+788
+589
 -1
 -1
-7.51
+9.3443
 1
 10
 1
