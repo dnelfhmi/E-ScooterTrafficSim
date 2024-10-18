@@ -1,7 +1,13 @@
 ;===== Globals and Agent Variables =====
 globals [
-  origin-points     ; List of starting locations
-  destination-points ; List of ending locations
+  origin-points         ; List of starting locations
+  destination-points    ; List of ending locations
+  total-accidents       ; Total number of accidents
+  total-scooter-usage   ; Total active scooters
+  average-congestion    ; Average congestion level
+  total-arrival-time
+  total-arrivals
+  average-arrival-time
 ]
 
 turtles-own [
@@ -11,7 +17,16 @@ turtles-own [
   destination-footpath-y
   start-x
   start-y
+  start-time
   scooter-lane?
+  safety-level
+  car-speed
+  scooter-speed
+  people-speed
+  arrival-time
+  helmet-wearing
+  involved-in-accident?
+  to-die?
 ]
 
 patches-own [
@@ -29,6 +44,11 @@ to setup
   setup-cars                     ; Initialize car agents
   setup-scooters                 ; Initialize scooter agents
   reset-ticks                     ; Reset the tick counter
+  set total-accidents 0
+  set total-scooter-usage 0
+  set average-congestion 0
+  set total-arrivals 0
+  set total-arrival-time 0
 end
 
 to setup-patches
@@ -74,23 +94,20 @@ to setup-patches
   ]
 
   ; Change scooter lanes to crossings if adjacent to intersections and roads
+  ; Set crossings to white patch
   ask patches with [ lane-type = "scooter-lane" or lane-type = "scooter-intersection" ] [
     if any? neighbors4 with [ lane-type = "intersection" ] and any? neighbors with [ pcolor = gray ] [
       set lane-type "crossing"
+      set pcolor white
     ]
   ]
 
   ; Assign traffic light colors to intersections
-  ask patches with [(pxcor mod 7 = 0) and (pycor mod 7 = 0)] [
+  ask patches with [lane-type = "intersection"] [
     let patch-sum (pxcor + pycor) mod 3
     if (patch-sum = 0) [ set pcolor red ]
     if (patch-sum = 1) [ set pcolor yellow ]
     if (patch-sum = 2) [ set pcolor green ]
-  ]
-
-  ; Set crossings to white
-  ask patches [
-    if lane-type = "crossing" [ set pcolor white ]
   ]
 
   ; Define origin and destination points on roads
@@ -99,20 +116,16 @@ to setup-patches
 end
 
 to setup-cars
-  create-turtles 1 [
+  create-turtles number-of-cars [
     setxy random-xcor random-ycor
     ;; Ensure cars are placed on road patches
     while [ pcolor != gray ] [
-      setxy random-xcor random-ycor ;continue random car placement until land on gray patch
-      setxy pxcor pycor  ; if gray patch, set car on the center of that patch
+      setxy random-xcor random-ycor
+      setxy pxcor pycor
     ]
 
     ;; Assign a random road patch as destination
-    let destination patch random-xcor random-ycor
-    while [[pcolor] of destination != gray and [pcolor] of destination != white] [ ;dest patch must be on gray or white(make sense?) patch
-      set destination patch random-xcor random-ycor
-    ]
-
+    let destination one-of destination-points
     set destination-road-x [pxcor] of destination
     set destination-road-y [pycor] of destination
 
@@ -121,14 +134,14 @@ to setup-cars
     ]
 
     ;; Determine heading based on neighboring roads
-    let neighboring-roads neighbors with [pcolor = gray or pcolor = white]
+    let neighboring-roads neighbors with [ lane-type = "road" or lane-type = "intersection" ]
     if any? neighboring-roads [
       ; Vertical roads: face north or south
-      if any? neighboring-roads with [pycor = [pycor] of myself + 1 or pycor = [pycor] of myself - 1] [
+      if any? neighboring-roads with [ pycor = [pycor] of myself + 1 or pycor = [pycor] of myself - 1 ] [
         set heading one-of [0 180]
       ]
       ; Horizontal roads: face east or west
-      if any? neighboring-roads with [pxcor = [pxcor] of myself + 1 or pxcor = [pxcor] of myself - 1] [
+      if any? neighboring-roads with [ pxcor = [pxcor] of myself + 1 or pxcor = [pxcor] of myself - 1 ] [
         set heading one-of [90 270]
       ]
     ]
@@ -136,13 +149,17 @@ to setup-cars
     set shape "car"      ; Set agent shape to car
     set color blue       ; Set car color to blue
 
+    set car-speed random-normal car-speed-slider (car-speed-slider / 4)
+    if car-speed < 0 [set car-speed 0]
+    if car-speed > 0.1 [set car-speed 0.1]
+
     set safety-level safety-level-slider
-    set car-speed car-speed-slider
+    set arrival-time 0
   ]
 end
 
 to setup-people
-  create-turtles 1 [
+  create-turtles number-of-people [
     setxy random-xcor random-ycor
     ;; Ensure people are placed on scooter lanes
     while [ pcolor != blue ] [
@@ -203,14 +220,17 @@ to setup-people
 
     set shape "person"   ; Set agent shape to person
     set color black      ; Set person color to black
+    set people-speed random-normal 0.02 0.01
+    if people-speed < 0 [set people-speed 0]
+    if people-speed > 0.5 [set people-speed 0.5]
   ]
 end
 
 to setup-scooters
-  create-turtles 1 [
+  create-turtles number-of-scooters [
     ; Position the scooter on a random blue patch
     setxy random-xcor random-ycor
-    while [pcolor != blue] [
+    while [lane-type != "scooter-lane"] [
       setxy random-xcor random-ycor
     ]
     set start-x pxcor
@@ -258,17 +278,36 @@ to setup-scooters
     ]
 
     set shape "default"    ; Set agent shape to default (scooter)
-    set color green        ; Set scooter color to green
+    set color red        ; Set scooter color to green
     set scooter-lane? true ; Indicate scooter is on a scooter lane
+
+    set safety-level safety-level-slider
+    set scooter-speed scooter-speed-slider
+    set helmet-wearing random-float 1 < helmet-usage-slider
+    set size 2
+
+    set scooter-speed random-normal scooter-speed-slider (scooter-speed-slider / 4)
+    if scooter-speed < 0 [set scooter-speed 0]
+    if scooter-speed > 0.1 [set scooter-speed 0.1]
   ]
 end
 
 ;===== Go =====
 
 to go
+  ; Check the termination conditions
+  if not any? turtles or ticks >= 50000 [
+    stop
+  ]
+
   move-cars           ; Move car agents
   move-people         ; Move people agents
   move-scooters       ; Move scooter agents
+
+  update-congestion
+  detect-accidents
+  calculate-average-arrival-time
+
   change-lane         ; Possibly change lanes for scooters/cars
   change-lights       ; Update traffic light colors
   tick                ; Advance the simulation clock
@@ -288,35 +327,44 @@ to move-cars
       if heading = 180 [ set change-y -1 ] ; South
       if heading = 270 [ set change-x -1 ] ; West
 
-      let color-of-next-patch [pcolor] of patch-at change-x change-y
+      let next-patch patch-at change-x change-y
+      let color-of-next-patch [pcolor] of next-patch
+      let next-patch-lane-type [lane-type] of next-patch  ; Check lane-type of the next patch
 
-      ; Debug: Print current position, heading, and next patch color
-      print (word "Car at (" pxcor ", " pycor ") heading " heading " Next patch color: " color-of-next-patch)
-
+      print (word "Color of next patch: " color-of-next-patch)
+      ; Check for red or yellow traffic lights
       ifelse (color-of-next-patch = red) or (color-of-next-patch = yellow) [
         ; Handle red or yellow light
         print "Car stopped due to red/yellow light."
-        ; Optional: Implement stopping behavior, such as setting speed to 0
       ] [
 
-          fd car-speed  ; Move forward if the next patch's light is green
+        ; Allow movement through road, crossing, or intersection patches
+        if (next-patch-lane-type = "road" or next-patch-lane-type = "crossing" or next-patch-lane-type = "intersection")[
+          fd car-speed   ; Move forward on road or crossing
           print "Car moved forward."
 
-          ; Update heading towards destination
-          ifelse abs(pxcor - destination-road-x) > abs(pycor - destination-road-y) [
-            if pxcor < destination-road-x [ set heading 90 ]    ; East
-            if pxcor > destination-road-x [ set heading 270 ]   ; West
-          ] [
-            if pycor < destination-road-y [ set heading 0 ]     ; North
-            if pycor > destination-road-y [ set heading 180 ]   ; South
+          ; Only update heading **after** moving forward
+          ; Update heading towards destination only if car has moved
+          if lane-type = "intersection"[
+            ifelse abs(pxcor - destination-road-x) > abs(pycor - destination-road-y) [
+              if pxcor < destination-road-x [ set heading 90 ]    ; East
+              if pxcor > destination-road-x [ set heading 270 ]   ; West
+            ] [
+              if pycor < destination-road-y [ set heading 0 ]     ; North
+              if pycor > destination-road-y [ set heading 180 ]   ; South
+            ]
+            print (word "Car updated heading to " heading)
           ]
-          print (word "Car updated heading to " heading)
-
-
-        ; Remove car upon reaching destination
-        if pxcor = destination-road-x and pycor = destination-road-y [
-          die
-          print "Car has reached its destination and is removed."
+          ; Remove car upon reaching destination
+          if pxcor = destination-road-x and pycor = destination-road-y [
+            ;; Calculate arrival time
+            set arrival-time ticks - start-time
+            ;; Update total arrival time and arrivals count
+            set total-arrival-time total-arrival-time + arrival-time
+            set total-arrivals total-arrivals + 1
+            die
+            print "Car has reached its destination and is removed."
+          ]
         ]
       ]
     ]
@@ -327,7 +375,6 @@ to move-people
   ask turtles [
     ; Ensure the turtle is a person by checking its shape
     if shape = "person" [
-      let people-speed people-speed-slider
 
       let change-x 0
       let change-y 0
@@ -367,6 +414,11 @@ to move-people
 
       ; Remove person upon reaching destination
       if pxcor = destination-footpath-x and pycor = destination-footpath-y [
+        ;; Calculate arrival time
+        set arrival-time ticks - start-time
+        ;; Update total arrival time and arrivals count
+        set total-arrival-time total-arrival-time + arrival-time
+        set total-arrivals total-arrivals + 1
         die
       ]
     ]
@@ -376,8 +428,6 @@ end
 to move-scooters
   ask turtles with [shape = "default"] [
     ; Check if the scooter has reached its destination
-    let safety-level safety-level-slider
-    let scooter-speed scooter-speed-slider
 
     let change-x 0
     let change-y 0
@@ -440,6 +490,11 @@ to move-scooters
       ; Remove scooter upon reaching any destination
       if ((pxcor = destination-footpath-x) and (pycor = destination-footpath-y)) or
          ((pxcor = destination-road-x) and (pycor = destination-road-y)) [
+        ;; Calculate arrival time
+        set arrival-time ticks - start-time
+        ;; Update total arrival time and arrivals count
+        set total-arrival-time total-arrival-time + arrival-time
+        set total-arrivals total-arrivals + 1
         die
       ]
     ]
@@ -447,7 +502,7 @@ to move-scooters
 end
 
 to change-lights
-  if ticks mod 100 = 0 [
+  if ticks mod 30 = 0 [
     ;; Cycle traffic light colors
     ask patches with [pcolor = red] [
       set pcolor black
@@ -473,7 +528,7 @@ to change-lane
 
       ifelse scooter-lane? [
         ; Attempt to change from scooter lane to road
-        if random-float 1 > safety-level-slider [
+        if random-float 1 > safety-level [
           ask patch pxcor pycor [
             ask neighbors [
               if pcolor = gray or pcolor = white [
@@ -486,7 +541,7 @@ to change-lane
         ]
       ] [
         ; Attempt to change from road to scooter lane
-        if random-float 1 > safety-level-slider [
+        if random-float 1 > safety-level [
           ask patch pxcor pycor [
             ask neighbors [
               if pcolor = blue or pcolor = rgb 80 80 255 [
@@ -511,15 +566,108 @@ to change-lane
     ]
   ]
 end
+
+;===== Congestion Measurement Submodel =====
+
+to update-congestion
+  ;; Calculate the average number of agents per road patch
+  let total-road-patches count patches with [lane-type = "road" or lane-type = "intersection" or lane-type = "crossing"]
+  let agents-on-road count turtles with [
+    [lane-type] of patch-here = "road" or
+    [lane-type] of patch-here = "intersection" or
+    [lane-type] of patch-here = "crossing"
+  ]
+  if total-road-patches > 0 [
+    set average-congestion agents-on-road / total-road-patches
+  ]
+end
+
+;===== Accident Rate Submodel =====
+
+to detect-accidents
+  ;; Reset accident status
+  ask turtles [
+    set involved-in-accident? false
+    set to-die? false
+  ]
+
+  ;; Create a list of all turtles to iterate over pairs
+  let turtle-list sort turtles
+
+  ;; Iterate over each turtle
+  while [not empty? turtle-list] [
+    let turtle1 first turtle-list
+    set turtle-list but-first turtle-list  ; Remove turtle1 from the list
+
+    ;; Proceed only if turtle1 is not marked to die
+    if [to-die?] of turtle1 = false [
+      ;; Convert the remaining turtle-list to an agentset
+      let remaining-turtles turtle-set turtle-list
+
+      ;; Find other turtles within collision distance
+      let nearby-turtles remaining-turtles with [
+        distance turtle1 <= 1 and not involved-in-accident? and to-die? = false
+      ]
+
+      ;; Evaluate potential accidents with each nearby turtle
+      ask nearby-turtles [
+        ;; Ensure turtle1 is still alive and not marked to die
+        if [to-die?] of turtle1 = false [
+          ;; Calculate combined safety level
+          let combined-safety-level (safety-level + [safety-level] of turtle1) / 2
+          ;; Define accident probability
+          let accident-probability (1 - combined-safety-level)
+          ;; Adjust for agent types if desired
+          if (shape = "car" and [shape] of turtle1 = "default") or
+             (shape = "default" and [shape] of turtle1 = "car") [
+            set accident-probability accident-probability * 1.5  ; Increase risk
+          ]
+          ;; Ensure probability is between 0 and 1
+          if accident-probability < 0 [ set accident-probability 0 ]
+          if accident-probability > 1 [ set accident-probability 1 ]
+          ;; Probabilistic accident occurrence
+          if random-float 1 < accident-probability [
+            ;; Mark both agents as involved in an accident
+            set involved-in-accident? true
+            set to-die? true
+            ask turtle1 [
+              set involved-in-accident? true
+              set to-die? true
+            ]
+            ;; Increment total accidents
+            set total-accidents total-accidents + 1
+            ;; Mark the accident location
+            ;ask patch-here [ set pcolor violet ]
+            ;; Exit the loop to prevent further interactions
+            stop
+          ]
+        ]
+      ]
+    ]
+  ]
+
+  ;; After all interactions, remove turtles that are marked to die
+  ask turtles with [to-die?] [
+    die
+  ]
+end
+
+;===== Arrival Time Tracking Submodel =====
+
+to calculate-average-arrival-time
+  if total-arrivals > 0 [
+    set average-arrival-time total-arrival-time / total-arrivals
+  ]
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
-418
-10
-1146
-739
+359
+11
+871
+524
 -1
 -1
-11.8033
+8.2623
 1
 10
 1
@@ -540,10 +688,10 @@ ticks
 30.0
 
 BUTTON
-112
-116
-178
-149
+183
+257
+249
+290
 NIL
 setup\n
 NIL
@@ -557,10 +705,10 @@ NIL
 1
 
 BUTTON
-112
-155
-178
-188
+183
+296
+250
+329
 NIL
 go
 T
@@ -574,10 +722,10 @@ NIL
 1
 
 SLIDER
-194
-114
-366
-147
+183
+51
+359
+84
 safety-level-slider
 safety-level-slider
 0
@@ -589,25 +737,25 @@ NIL
 HORIZONTAL
 
 SLIDER
-193
-159
-366
-192
+183
+93
+358
+126
 scooter-speed-slider
 scooter-speed-slider
 0
 0.1
-0.06
+0.03
 0.01
 1
 NIL
 HORIZONTAL
 
 SLIDER
-193
-204
-365
-237
+183
+131
+359
+164
 car-speed-slider
 car-speed-slider
 0
@@ -619,19 +767,192 @@ NIL
 HORIZONTAL
 
 SLIDER
-192
-248
-365
-281
+0
+10
+180
+43
 people-speed-slider
 people-speed-slider
 0
 0.05
-0.03
+0.01
 0.01
 1
 NIL
 HORIZONTAL
+
+SLIDER
+2
+51
+180
+84
+helmet-usage-slider
+helmet-usage-slider
+0
+1
+0.5
+0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+3
+93
+180
+126
+safety-awareness-slider
+safety-awareness-slider
+0
+1
+0.5
+0.1
+1
+NIL
+HORIZONTAL
+
+SWITCH
+183
+11
+359
+44
+dedicated-scooter-lane
+dedicated-scooter-lane
+0
+1
+-1000
+
+PLOT
+878
+12
+1208
+207
+Average Congestion 
+ticks
+average-congestion
+0.0
+1000.0
+0.0
+0.01
+true
+false
+"" ""
+PENS
+"Congestion" 1.0 0 -13345367 true "" "plot average-congestion"
+
+PLOT
+878
+213
+1208
+407
+Total Accident
+ticks
+total-accidents
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"Accident" 1.0 0 -2674135 true "" "plot total-accidents"
+
+PLOT
+1212
+11
+1531
+206
+Average Arrival Time
+ticks
+average-arrival-time
+0.0
+10.0
+0.0
+1.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -10141563 true "" "plot average-arrival-time"
+
+SLIDER
+4
+131
+180
+164
+number-of-cars
+number-of-cars
+0
+100
+12.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+4
+171
+179
+204
+number-of-people
+number-of-people
+0
+100
+13.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+3
+212
+179
+245
+number-of-scooters
+number-of-scooters
+0
+100
+14.0
+1
+1
+NIL
+HORIZONTAL
+
+MONITOR
+5
+375
+118
+420
+agents-on-road
+count turtles with [\n    [lane-type] of patch-here = \"road\" or\n    [lane-type] of patch-here = \"intersection\" or\n    [lane-type] of patch-here = \"crossing\"\n  ]
+17
+1
+11
+
+MONITOR
+125
+375
+257
+420
+total_road_patches
+count patches with [\n    member? lane-type [\"road\" \"intersection\" \"crossing\"]\n  ]
+17
+1
+11
+
+MONITOR
+6
+427
+118
+472
+total-arrivals
+count total-arrivals
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
