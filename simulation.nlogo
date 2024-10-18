@@ -17,6 +17,7 @@ globals [
   car-car-accidents
   scooter-scooter-accidents
   scooter-person-accidents
+
 ]
 
 turtles-own [
@@ -31,7 +32,6 @@ turtles-own [
   start-y
   scooter-lane?
   safety-level
-  helmet?
   arrival-time
 ]
 
@@ -54,7 +54,7 @@ to setup
   set car-person-accidents 0
   set car-scooter-accidents 0
   set scooter-person-accidents 0
-  set accident-probability 0.2
+
   resize-world -30 30 -30 30
   set average-congestion 0
   setup-patches
@@ -435,7 +435,6 @@ to setup-scooters
 
     set shape "bike"
     set color green
-
     set scooter-lane? true
     set scooter-speed abs( random-normal (scooter-speed-slider / 2000) 0.03)
     set safety-level abs( random-normal (scooter-safety-slider / 2000) 0.03)
@@ -611,12 +610,21 @@ to accident
         ; Check for collisions between car and scooter
         let nearby-scooters turtles with [shape = "bike" and distance myself < 1]
         if any? nearby-scooters [
+        ifelse helmet?
+        [
+          if random-float 1 < accident-probability / 2 [
+            set car-scooter-accidents car-scooter-accidents + 1
+            ask nearby-scooters [ die]
+            die
+          ]
+        ][
           if random-float 1 < accident-probability [
             set car-scooter-accidents car-scooter-accidents + 1
             ask nearby-scooters [ die]
             die
           ]
         ]
+      ]
       let nearby-cars turtles with [shape = "car" and distance myself < 1 and self != myself]
       if any? nearby-cars [
         if random-float 1 < accident-probability [
@@ -632,21 +640,39 @@ to accident
         ; Check for collisions between scooter and person
         let nearby-people turtles with [shape = "person" and distance myself < 1]
         if any? nearby-people [
+        ifelse helmet?
+        [
+          if random-float 1 < accident-probability / 2 [
+            set scooter-person-accidents scooter-person-accidents + 1
+            ask nearby-people [ die ]
+            die
+          ]
+        ][
           if random-float 1 < accident-probability [
             set scooter-person-accidents scooter-person-accidents + 1
             ask nearby-people [ die ]
             die
           ]
         ]
+      ]
       ; Check for collisions between scooter and another scooter
         let nearby-scooters turtles with [shape = "bike" and distance myself < 1 and self != myself]
         if any? nearby-scooters [
+        ifelse helmet?
+        [
+          if random-float 1 < accident-probability / 2 [
+            set scooter-scooter-accidents scooter-scooter-accidents + 1
+            ask nearby-scooters [ die ] ; Remove the other scooter involved in the accident
+            die                         ; Remove the current scooter involved in the accident
+          ]
+        ][
           if random-float 1 < accident-probability [
             set scooter-scooter-accidents scooter-scooter-accidents + 1
             ask nearby-scooters [ die ] ; Remove the other scooter involved in the accident
             die                         ; Remove the current scooter involved in the accident
           ]
         ]
+      ]
       ]
     ]
 end
@@ -665,7 +691,6 @@ to update-congestion
     set average-congestion agents-on-road / total-road-patches
   ]
 end
-
 
 
 @#$#@#$#@
@@ -806,7 +831,7 @@ num-agents
 num-agents
 10
 500
-10.0
+460.0
 50
 1
 NIL
@@ -1032,10 +1057,10 @@ SLIDER
 535
 accident-probability
 accident-probability
-0.01
-0.1
-0.02
-0.01
+0.05
+0.3
+0.3
+0.05
 1
 NIL
 HORIZONTAL
@@ -1079,6 +1104,17 @@ false
 "" ""
 PENS
 "default" 1.0 0 -16777216 true "" "plot average-congestion"
+
+SWITCH
+41
+561
+144
+594
+helmet?
+helmet?
+0
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
