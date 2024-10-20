@@ -1231,39 +1231,128 @@ num-agents * (%-people) / 100
 @#$#@#$#@
 ## WHAT IS IT?
 
-(a general understanding of what the model is trying to show or explain)
+Traffic Dynamics Simulation with Multi-Agent Interactions
+
+This NetLogo model simulates urban traffic dynamics involving three types of agents: cars, people, and scooters. It aims to demonstrate and analyze the interactions between different transportation modes within a city environment, highlighting factors such as movement patterns, traffic light control, lane switching, accidents, and congestion levels. By modeling these elements, the simulation provides insights into how various agents navigate through roads, scooter lanes, and pedestrian paths, and how their interactions impact overall traffic flow and safety.
+
+Key Objectives:
+
+• Traffic Flow Analysis: Understand how different agents contribute to or alleviate congestion.
+• Safety Assessment: Evaluate the frequency and impact of accidents among cars, scooters, and pedestrians.
+• Infrastructure Utilization: Observe the effectiveness of dedicated lanes (e.g., scooter lanes) and traffic light systems.
+• Behavioral Insights: Explore how agent behaviors, such as lane switching and compliance with traffic signals, influence the overall traffic environment.
 
 ## HOW IT WORKS
 
-(what rules the agents use to create the overall behavior of the model)
+Agent-Based Rules and Interactions Driving the Simulation
+
+The model operates based on a set of predefined rules governing the behavior of three types of agents—cars, people, and scooters—and their interactions with the environment and each other. Here’s an overview of the core mechanics:
+
+1. Environment Setup:
+
+• Grid Layout: The simulation world is a grid with designated areas for roads, scooter lanes, intersections, crossings, and grass (non-navigable areas).
+• Lane Types:
+	• Roads: Main horizontal and vertical roads where cars primarily operate.
+	• Scooter Lanes: Dedicated lanes adjacent to roads for scooter movement.
+	• Intersections and Crossings: Points where roads intersect, controlled by 			  traffic lights, and crossings for pedestrians.
+
+2. Agent Initialization:
+
+• Cars:
+	• Spawn on random road patches.
+	• Assigned random road destinations.
+	• Move towards their destinations, obeying traffic lights and adjusting direction 	  as needed.
+• People:
+	• Spawn on scooter lanes (blue patches).
+	• Assigned footpath destinations.
+	• Navigate towards their destinations, stopping at crossings if cars are nearby.
+• Scooters:
+	• Spawn on scooter lanes.
+	• Assigned scooter lane destinations.
+	• Move within scooter lanes or switch to roads, adhering to traffic signals and 		  adjusting direction towards destinations.
+
+3. Movement Rules:
+
+• Directional Movement: Agents move in the direction they are heading (north, east, south, west) based on their initial assignment and proximity to destinations.
+• Traffic Light Compliance:
+	• Cars and Scooters: Stop at red or yellow traffic lights; proceed on 				  green.
+	• People: Stop at crossings if cars are within a certain distance.
+• Lane Switching:
+	• Scooters: Periodically attempt to switch between scooter lanes and roads to 			  simulate dynamic lane usage.
+•Destination Arrival: Upon reaching their assigned destinations, agents update statistics 		      (e.g., time taken, distance traveled) and are removed from the simulation.
+
+4. Accident Handling:
+
+• Collision Detection: The model checks for proximity-based collisions between cars, scooters, and people.
+• Accident Probabilities: Based on factors like helmet usage and scooter safety levels, accidents are probabilistically determined.
+• Consequences: Involved agents are removed from the simulation upon accidents, and relevant accident counters are incremented.
+
+5. Congestion Measurement:
+
+• Average Congestion: Calculated as the number of agents per kilometer of road, providing a metric to assess traffic density and congestion levels.
+
+	6. Traffic Light Control:
+
+• Cycle Timing: Traffic lights at intersections change colors in a fixed sequence (red → black → green → yellow → red) every 90 ticks to simulate real-world traffic signal timing.
 
 ## HOW TO USE IT
 
-(how to use the model, including a description of each of the items in the Interface tab)
+The Interface Tab in NetLogo typically includes sliders, switches, buttons, and monitors that allow users to interact with and control the simulation. Below is a description of the likely interface elements based on the provided code:
+
+Sliders:
+	•	car-speed-slider: Adjusts the average speed of car agents.
+	•	people-speed-slider: Adjusts the average speed of people agents.
+	•	scooter-speed-slider: Adjusts the average speed of scooter agents.
+	•	scooter-safety-slider: Sets the safety level for scooters, influencing   			accident probabilities.
+	•	accident-probability: Determines the base probability of accidents occurring during collisions.
+
+Switches:
+	•	change-lane-switch?: Toggles the lane-switching behavior of scooters on or off.
+
+Buttons:
+	•	setup: Initializes the simulation by setting up the environment and agents.
+	•	go: Starts or resumes the simulation loop, allowing agents to move and interact according to the defined rules.
+	•	stop: Halts the simulation loop.
+
+Monitors:
+	•	average-congestion: Displays the current average congestion level on roads.
+	•	Accident Counters: Various monitors to display the number of different types of accidents (e.g., car-person-accidents, car-scooter-accidents, etc.).
+	•	Arrival Counters: Monitors to show the number of agents that have reached their destinations (e.g., num-car-arrivals, num-people-arrivals, num-scooter-arrivals).
+	•	Time and Distance Metrics: Displays cumulative time and distance metrics for each agent type.
+
+To run the simulation, users begin by setting the desired parameters using the sliders and toggling the lane-switching switch as needed. After configuring the settings, clicking the setup button initializes the environment and agents, followed by clicking the go button to start the simulation. Users can observe the simulation’s progress through the monitors and make real-time adjustments to parameters to see how changes affect traffic flow, congestion, and accident rates. The simulation will continue until all agents have either reached their destinations or been removed due to accidents, or until a predefined tick limit is reached. Users can pause or stop the simulation at any time using the stop button to analyze the current state or modify parameters for further experimentation.
 
 ## THINGS TO NOTICE
 
-(suggested things for the user to notice while running the model)
+As you run the simulation, several critical aspects emerge that offer valuable insights into urban traffic dynamics. One primary observation is the formation of congestion hotspots, particularly at major intersections or heavily trafficked roads, where the accumulation of cars, scooters, and pedestrians can significantly impact traffic flow. The distribution of different agent types across the network reveals how cars, scooters, and people utilize roads and lanes differently, highlighting the effectiveness of dedicated scooter lanes in managing two-wheeled traffic. Observing the impact of lane switching behavior, enabled or disabled via the change-lane-switch? switch, allows users to assess whether such maneuvers help alleviate congestion or inadvertently contribute to traffic density. The role of traffic light cycles is also evident, as the fixed timing of traffic signals influences the stop-and-go patterns of cars and scooters, affecting overall traffic efficiency.
+
+ Accident dynamics become apparent through the frequency and types of collisions occurring between cars, scooters, and pedestrians, providing a measure of the model’s safety aspects. Additionally, monitoring the average-congestion metric over time offers a quantitative assessment of traffic density, enabling users to correlate parameter adjustments with changes in congestion levels. The interactions between different agent types, such as cars passing scooters or people stopping at crossings when cars are nearby, showcase the complexity of managing diverse transportation modes within a single traffic system. These observations collectively help users understand the intricate balance required to maintain smooth and safe urban traffic flow.
 
 ## THINGS TO TRY
 
-(suggested things for the user to try to do (move sliders, switches, etc.) with the model)
+To deepen your understanding of the simulation and its underlying dynamics, several experimental adjustments are recommended. Start by varying the percentages of different agent types using the %-cars, %-people, and %-scooters sliders to observe how changes in the composition of traffic affect congestion and accident rates. For instance, increasing the proportion of cars may lead to higher congestion and more frequent collisions, while boosting the number of scooters or pedestrians could highlight the effectiveness of dedicated lanes and pedestrian crossings. Adjusting the speeds of agents through the car-speed-slider, people-speed-slider, and scooter-speed-slider allows you to explore how faster or slower movement impacts overall traffic flow and congestion levels. Modifying the scooter-safety-slider and accident-probability slider can help you assess the influence of safety measures and accident likelihood on traffic dynamics and agent interactions. Enabling or disabling the change-lane-switch? switch provides an opportunity to evaluate the benefits and drawbacks of scooter lane switching behavior in managing traffic density.
+
+ Additionally, experimenting with the duration of the traffic light cycle by adjusting the timing within the change-lights procedure (if accessible) can reveal how different signaling timings influence traffic efficiency and congestion at intersections. Running the simulation for extended periods beyond the default 40,000 ticks can help you observe long-term traffic patterns and congestion trends. Furthermore, introducing additional agent types, such as buses or trucks, and observing their interactions with existing agents can add complexity and realism to the simulation. These experimental adjustments encourage users to interact dynamically with the model, fostering a comprehensive understanding of urban traffic management and the factors that influence it.
 
 ## EXTENDING THE MODEL
 
-(suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
+To elevate the simulation’s complexity and realism, several enhancements can be implemented. One significant extension is the incorporation of adaptive traffic lights that adjust their timing based on real-time congestion levels or traffic density, making the traffic light control more responsive to actual traffic conditions. Introducing more sophisticated pathfinding algorithms for agents would allow cars, people, and scooters to choose optimal routes rather than random destinations, thereby simulating more realistic navigation behaviors. Adding varied road types, such as secondary roads with different speed limits or one-way streets, can diversify traffic flow and introduce additional layers of complexity to the network. Implementing pedestrian-specific crosswalks with dedicated signals can enhance the realism of pedestrian interactions with vehicular traffic, ensuring better safety dynamics. Incorporating emergency vehicles with priority access would add another dimension to traffic management, requiring the simulation to handle dynamic obstacles and priority routing. 
 
-## NETLOGO FEATURES
+Environmental factors like weather conditions (e.g., rain, snow) and time-of-day cycles could be introduced to simulate their effects on agent speeds, accident probabilities, and overall traffic behavior. Expanding data collection and visualization tools within the model, such as detailed metrics and graphical displays, would provide deeper insights into traffic patterns and congestion trends. Enhancing the user interface with more interactive controls, such as additional sliders or agent selection features, would allow users to manipulate a broader range of parameters and observe their effects in real-time. Introducing multi-lane roads with lane-specific behaviors, such as overtaking and lane changing for cars, would add further realism to the traffic simulation. Additionally, integrating public transportation elements like buses with predefined routes and passenger boarding dynamics could enrich the simulation by reflecting more complex urban transportation systems. These extensions not only increase the model’s depth and applicability but also offer users a more nuanced understanding of the multifaceted nature of urban traffic management.
 
-(interesting or unusual features of NetLogo that the model uses, particularly in the Code tab; or where workarounds were needed for missing features)
-
-## RELATED MODELS
-
-(models in the NetLogo Models Library and elsewhere which are of related interest)
 
 ## CREDITS AND REFERENCES
 
-(a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
+Model Development:
+
+Riwaz Udas
+Muhammad Md Nasrein
+
+October 2024
+
+University of Melbourne
+
+https://github.com/dnelfhmi/E-ScooterTrafficSim.git
 @#$#@#$#@
 default
 true
